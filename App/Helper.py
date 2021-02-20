@@ -77,6 +77,11 @@ class LRU_CACHE:
             del self.hash_map[end.extra]
         self.cache.insert_top(node)
 
+    def update_value(self,key,value):
+        node = self.hash_map.get(key)
+        if node is not None:
+            node.val = value
+            
     def get(self, key):
         node = self.hash_map.get(key)
         if node is not None and node != self.cache.root:
