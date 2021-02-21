@@ -45,9 +45,11 @@ class Queue:
         if self.root is not None and self.root.next is not None:
             self.root.next.prev = None
             self.root = self.root.next
-        else:
+            head.next = None
+            self.length -= 1
+        elif self.root is not None:
             self.tail = self.root = None 
-        self.length -= 1
+            self.length -= 1
         return head
 
     def pop_end(self):

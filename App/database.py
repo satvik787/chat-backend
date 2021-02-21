@@ -2,7 +2,6 @@ import mysql.connector
 from datetime import datetime
 from Helper import Node, Message, LRU_CACHE
 from math import floor
-from concurrent.futures import ThreadPoolExecutor
 
 mydb = mysql.connector.connect(
     host="localhost",
@@ -12,7 +11,6 @@ mydb = mysql.connector.connect(
     database="chat")
 
 cursor = mydb.cursor()
-executor = ThreadPoolExecutor(2)
 
 class Callback:
     def update(self,user_id, msg_count):
@@ -81,7 +79,7 @@ def add_msg(channel_id, user_id, text):
             active_users.update_value(user_id,msg_id)
         cursor.execute("UPDATE users SET msg_count = %s WHERE user_id = %s",(msg_id,user_id))
         db_add_msg(msg_id, channel_id, user_id, text, chain_val, now)
-        return Message(msg_id,channel_id,user_id,text,chain_val,now), u_two 
+        return (msg_id,channel_id,user_id,text,chain_val,now), u_two 
     return None, None
 
 def db_add_msg(msg_id, channel_id, user_id, text, chain_val,sent_at):
@@ -116,10 +114,20 @@ def gen_chain_val(channel, user_id):
         elif sub < obj:
             chain_val = floor(obj) + 1.0
         u_two = channel[0][1]
-        executor.submit(cursor.execute,"UPDATE channels SET chain_two = %s",(chain_val,)) 
+        cursor.execute("UPDATE channels SET chain_two = %s",(chain_val,)) 
     return chain_val,u_two
 
-def read_all_msg(user_id,channel_id):
-    cursor.execute("SELECT * FROM messages WHERE user_id = %s and channel_id = %s",(user_id,channel_id))
+def read_all_msg(channel_id):
+    cursor.execute("SELECT * FROM messages WHERE  channel_id = %s",(channel_id,))
     msg = cursor.fetchall()
     return msg if len(msg) > 0 else None 
+
+def save_msg_count():
+    trav = active_users.cache.pop()
+    data = []
+    while trav is not None:
+        data.append((trav.val, trav.extra))
+    query = "UPDATE users SET msg_count = %s WHERE user_id= %s"
+    cursor.executemany(query,data)
+    mydb.commit()
+    mydb.close()
