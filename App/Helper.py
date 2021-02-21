@@ -1,12 +1,3 @@
-class Message:
-    def __init__(self, msg_id, channel_id, user_name, msg, chain_val, time):
-        self.msg_id = msg_id
-        self.channel_id = channel_id
-        self.user_name = user_name
-        self.msg = msg
-        self.chain_val = chain_val
-        self.time = time
-
 class Node:
     def __init__(self,val, extra=None):
         self.val = val
@@ -83,7 +74,27 @@ class LRU_CACHE:
         node = self.hash_map.get(key)
         if node is not None:
             node.val = value
-            
+    
+    def remove(self,key):
+        node: Node = self.hash_map.get(key)
+        if node is not None:
+            if node == self.cache.root:
+                node.next.prev = None
+                self.root = node.next
+                node.next = None
+            elif node == self.cache.tail:
+                node.prev.next = None
+                self.tail = node.prev
+                node.prev = None
+            else:
+                node.next.prev = node.prev
+                node.prev.next = node.next
+                node.next = node.prev = None
+            del self.hash_map[key]
+            self.cache.length -= 1
+            return node
+        return None
+    
     def get(self, key):
         node = self.hash_map.get(key)
         if node is not None and node != self.cache.root:

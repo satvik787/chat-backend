@@ -1,6 +1,6 @@
 import mysql.connector
 from datetime import datetime
-from Helper import Node, Message, LRU_CACHE
+from Helper import Node, LRU_CACHE
 from math import floor
 
 mydb = mysql.connector.connect(
@@ -17,7 +17,6 @@ class Callback:
         self.db_msg_count(user_id, msg_count)
     def db_msg_count(self,user_id, msg_count):
         cursor.execute("UPDATE users SET msg_count = %s WHERE user_id = %s",(msg_count, user_id))
-
 active_users = LRU_CACHE(Callback(),capacity=1)
 
 def login(user_name,password) -> dict:
@@ -92,6 +91,26 @@ def get_user(user_id):
     user = cursor.fetchall()
     return user[0] if len(user) > 0 else None 
 
+def search_user(user_name):
+    cursor.execute("SELECT * FROM users WHERE user_name LIKE %s",("%"+user_name+"%",))
+    return cursor.fetchall()
+
+def channel_exists(user_one,user_two):
+    query = "SELECT * FROM channels WHERE user_one_id = %s and user_two_id = %s or user_one_id = %s and user_two_id = %s"
+    cursor.execute(query,(user_one,user_two,user_two,user_one))
+    channel = cursor.fetchall()
+    return channel[0] if len(channel) > 0 else None
+
+def channel_all(user_id):
+    cursor.execute("SELECT * FROM channels WHERE user_one_id = %s or user_two_id = %s",(user_id,user_id))
+    return cursor.fetchall()
+
+def create_channel(user_one,user_two):
+    query = "INSERT INTO channels(user_one_id,user_two_id) values(%s,%s)"
+    cursor.execute(query,(user_one,user_two))
+    mydb.commit()
+    return channel_exists(user_one,user_two)
+
 
 def gen_chain_val(channel, user_id):
     chain_val,u_two = 0, None
@@ -117,6 +136,8 @@ def gen_chain_val(channel, user_id):
         cursor.execute("UPDATE channels SET chain_two = %s",(chain_val,)) 
     return chain_val,u_two
 
+
+
 def read_all_msg(channel_id):
     cursor.execute("SELECT * FROM messages WHERE  channel_id = %s",(channel_id,))
     msg = cursor.fetchall()
@@ -129,5 +150,4 @@ def save_msg_count():
         data.append((trav.val, trav.extra))
     query = "UPDATE users SET msg_count = %s WHERE user_id= %s"
     cursor.executemany(query,data)
-    mydb.commit()
     mydb.close()
